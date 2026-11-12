@@ -1,15 +1,22 @@
 window.QUIZ_CONFIG = {
   titulo: "Super Técnico Quiz",
 
-  // TEMPO DAS PERGUNTAS
-  // fatorTempo multiplica o tempo de todas as perguntas: 1 = normal, 0.7 = mais rápido, 1.5 = mais tempo.
-  fatorTempo: 1,
-  // Tempo base em segundos por dificuldade (1 = fácil, 2 = médio, 3 = difícil).
-  segundosPorNivel: { 1: 20, 2: 25, 3: 30 },
+  // TEMPO
+  // Segundos que cada pergunta dura (igual para todas).
+  segundosPorPergunta: 30,
 
-  // RANKING
-  // Só aparecem no ranking (e nos recordes) as partidas jogadas a partir desta data/hora.
-  // Para "zerar" o ranking sem apagar nada, coloque a data de hoje. Deixe "" para mostrar tudo.
+  // MODO EVENTO (página evento.html)
+  evento: {
+    perguntas: 20,   // perguntas por partida
+    tentativas: 2,   // tentativas por técnico (vale a melhor pontuação)
+    segundos: 30,    // segundos por pergunta no evento
+    // Só valem no ranking do evento (e nas tentativas) as partidas a partir desta data/hora. "" = todas.
+    rankingDesde: ""
+  },
+
+  // RANKING DOS MÓDULOS
+  // Só aparecem no ranking e nos recordes as partidas jogadas a partir desta data/hora.
+  // Para "zerar" o ranking sem apagar nada, coloque a data de agora. Deixe "" para mostrar tudo.
   // Formato: "AAAA-MM-DDTHH:MM:SS-03:00"  (exemplo: "2026-12-04T08:00:00-03:00")
   rankingDesde: "",
   rankingTamanho: 20,

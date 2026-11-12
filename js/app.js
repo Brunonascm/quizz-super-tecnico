@@ -5,6 +5,8 @@
   var Store = window.QuizStore;
   var Som = window.QuizAudio;
   var app = document.getElementById("app");
+  var EVENTO = window.QUIZ_MODO === "evento";
+  var EV = CFG.evento || {};
 
   var NIVEIS = { 1: "FÁCIL", 2: "MÉDIO", 3: "DIFÍCIL" };
   var LETRAS = ["A", "B", "C", "D"];
@@ -20,8 +22,9 @@
     combo: 0,
     melhorCombo: 0,
     resultados: [],
+    tentativa: 0,
     opcoes: [],
-    total: 20,
+    total: 30,
     t0: 0,
     timer: null,
     ultimoTique: -1
@@ -48,18 +51,21 @@
   }
 
   function rotuloEscopo(escopo) {
+    if (escopo === "evento") return "Modo Evento";
     if (escopo === "mix") return "Dúvidas Gerais";
     var m = modulo(escopo);
     return m ? m.nome : escopo;
   }
 
   function iconeEscopo(escopo) {
+    if (escopo === "evento") return "🏆";
     if (escopo === "mix") return "🎮";
     var m = modulo(escopo);
     return m ? m.icone : "🎮";
   }
 
   function corEscopo(escopo) {
+    if (escopo === "evento") return "#ffd54a";
     if (escopo === "mix") return "#ff2bd6";
     var m = modulo(escopo);
     return m ? m.cor : "#00e5ff";
@@ -99,6 +105,10 @@
     return melhor;
   }
 
+  function menuPrincipal() {
+    if (EVENTO || !E.jogador) telaInicio(); else telaModo();
+  }
+
   function animarNumero(el, de, para, ms) {
     var ini = Date.now();
     function passo() {
@@ -119,16 +129,18 @@
       '<div class="logo">' +
         '<svg class="logo-raio" viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="gr" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffe14d"/><stop offset="1" stop-color="#ff6a00"/></linearGradient></defs><polygon points="36,2 10,36 28,36 22,62 54,24 34,24" fill="url(#gr)" stroke="#fff" stroke-width="2" stroke-linejoin="round"/></svg>' +
         '<h1 class="logo-titulo" aria-label="Super Técnico"><span>SUPER</span><span>T<i class="ac">E</i>CNICO</span></h1>' +
-        '<p class="logo-sub">QUIZ DOMÍNIO</p>' +
+        '<p class="logo-sub">' + (EVENTO ? "MODO EVENTO" : "QUIZ DOMÍNIO") + "</p>" +
       "</div>" +
       '<div class="painel painel-inicio">' +
-        '<label for="nome" class="rotulo">DIGITE SEU NOME</label>' +
-        '<input id="nome" class="campo" maxlength="24" autocomplete="off" spellcheck="false" placeholder="Ex.: Maria S." value="' + esc(nome) + '">' +
+        '<label for="nome" class="rotulo">' + (EVENTO ? "NOME E SOBRENOME" : "DIGITE SEU NOME") + "</label>" +
+        '<input id="nome" class="campo" maxlength="24" autocomplete="off" spellcheck="false" placeholder="' + (EVENTO ? "Ex.: Maria Silva" : "Ex.: Maria S.") + '" value="' + esc(nome) + '">' +
         '<p class="msg-erro" id="erro-nome" role="alert"></p>' +
         '<button class="btn btn-grande btn-pulsa" id="jogar">▶ JOGAR</button>' +
         '<button class="btn btn-sec" id="ver-ranking">🏆 RANKING</button>' +
       "</div>" +
-      '<p class="dica">Responda dúvidas reais de implantação, ganhe pontos pela velocidade e suba no ranking.</p>',
+      '<p class="dica">' + (EVENTO
+        ? "Modo Evento: " + (EV.perguntas || 20) + " perguntas misturadas, " + (EV.tentativas || 2) + " tentativas. Vale a melhor pontuação."
+        : "Responda dúvidas reais de implantação, ganhe pontos pela velocidade e suba no ranking.") + "</p>",
       "inicio"
     );
     var campo = $("#nome");
@@ -137,8 +149,8 @@
     function avancar(destino) {
       Som.destravar();
       var n = campo.value.replace(/\s+/g, " ").trim();
-      if (n.length < 2) {
-        $("#erro-nome").textContent = "Digite seu nome (mínimo 2 letras).";
+      if (n.length < 2 || (EVENTO && !/\S+\s+\S+/.test(n))) {
+        $("#erro-nome").textContent = EVENTO ? "Digite nome e sobrenome." : "Digite seu nome (mínimo 2 letras).";
         campo.focus();
         return;
       }
@@ -148,10 +160,11 @@
       destino();
     }
 
-    $("#jogar").addEventListener("click", function () { avancar(telaModo); });
-    $("#ver-ranking").addEventListener("click", function () { avancar(function () { telaRanking("mix", "tudo"); }); });
+    var destinoJogar = EVENTO ? jogarEvento : telaModo;
+    $("#jogar").addEventListener("click", function () { avancar(destinoJogar); });
+    $("#ver-ranking").addEventListener("click", function () { avancar(function () { telaRanking(EVENTO ? "evento" : "mix", "tudo"); }); });
     campo.addEventListener("keydown", function (ev) {
-      if (ev.key === "Enter") avancar(telaModo);
+      if (ev.key === "Enter") avancar(destinoJogar);
     });
   }
 
@@ -201,6 +214,35 @@
     });
   }
 
+  /* ---------------- MODO EVENTO ---------------- */
+
+  function jogarEvento() {
+    E.fase = "verificando";
+    render('<div class="contagem"><div class="contagem-sub">Verificando suas tentativas…</div></div>', "inicio");
+    Store.tentativasEvento(E.jogador).then(function (usadas) {
+      var max = EV.tentativas || 2;
+      if (usadas >= max) { telaSemTentativas(max); return; }
+      Store.registrarTentativaEvento(E.jogador);
+      E.tentativa = usadas + 1;
+      iniciar("evento");
+    });
+  }
+
+  function telaSemTentativas(max) {
+    E.fase = "sem-tentativas";
+    render(
+      '<h2 class="titulo-tela fim">TENTATIVAS ESGOTADAS</h2>' +
+      '<p class="patente-msg">' + esc(E.jogador) + ", você já usou as " + max + " tentativas do Modo Evento. Vale a sua melhor pontuação!</p>" +
+      '<div class="acoes">' +
+        '<button class="btn btn-grande" id="ir-ranking">🏆 VER RANKING</button>' +
+        '<button class="btn btn-sec" id="ir-inicio">◀ INÍCIO</button>' +
+      "</div>",
+      "resultado"
+    );
+    $("#ir-ranking").addEventListener("click", function () { Som.clique(); telaRanking("evento", "tudo"); });
+    $("#ir-inicio").addEventListener("click", function () { Som.clique(); E.jogador = ""; telaInicio(); });
+  }
+
   /* ---------------- PARTIDA ---------------- */
 
   function sortear(escopo) {
@@ -234,7 +276,7 @@
 
   function iniciar(escopo) {
     E.escopo = escopo;
-    E.perguntas = sortear(escopo);
+    E.perguntas = EVENTO ? sortear("mix").slice(0, EV.perguntas || 20) : sortear(escopo);
     E.i = 0;
     E.pontos = 0;
     E.combo = 0;
@@ -250,7 +292,9 @@
         '<div class="contagem">' +
           '<div class="contagem-missao" style="--cor:' + corEscopo(escopo) + '">' + iconeEscopo(escopo) + " " + esc(rotuloEscopo(escopo).toUpperCase()) + "</div>" +
           '<div class="contagem-num' + (n === 3 ? " vai" : "") + '">' + passos[n] + "</div>" +
-          '<div class="contagem-sub">' + E.perguntas.length + " perguntas no banco · responda quantas quiser, " + esc(E.jogador) + "</div>" +
+          '<div class="contagem-sub">' + (EVENTO
+            ? "Tentativa " + E.tentativa + " de " + (EV.tentativas || 2) + " · " + E.perguntas.length + " perguntas · boa sorte, " + esc(E.jogador)
+            : E.perguntas.length + " perguntas no banco · responda quantas quiser, " + esc(E.jogador)) + "</div>" +
         "</div>",
         "contagem"
       );
@@ -265,12 +309,12 @@
   function telaPergunta() {
     var q = E.perguntas[E.i];
     var m = modulo(q.modulo);
-    E.total = Math.max(5, Math.round((CFG.segundosPorNivel[q.nivel] || 20) * (CFG.fatorTempo || 1)));
+    E.total = Math.max(5, Math.round((EVENTO && EV.segundos ? EV.segundos : CFG.segundosPorPergunta) || 30));
     E.opcoes = embaralhar(
       [{ t: q.certa, ok: true }].concat(q.erradas.map(function (t) { return { t: t, ok: false }; }))
     );
 
-    var marco = CFG.marcoPerguntas || 10;
+    var marco = EVENTO ? E.perguntas.length : (CFG.marcoPerguntas || 10);
     var blocoIni = Math.floor(E.i / marco) * marco;
     var pontinhos = "";
     for (var k = blocoIni; k < blocoIni + marco; k++) {
@@ -292,8 +336,8 @@
 
     render(
       '<header class="hud">' +
-        '<div class="hud-esq"><span class="hud-nome">👤 ' + esc(E.jogador) + '</span><button class="hud-parar" id="parar" title="Encerrar e salvar a pontuação">⏹ PARAR</button></div>' +
-        '<div class="hud-meio">PERGUNTA <b>' + (E.i + 1) + '</b><span class="hud-acertos">✔ ' + acertosAteAqui + " · ✘ " + (E.resultados.length - acertosAteAqui) + "</span></div>" +
+        '<div class="hud-esq"><span class="hud-nome">👤 ' + esc(E.jogador) + '</span>' + (EVENTO ? "" : '<button class="hud-parar" id="parar" title="Encerrar e salvar a pontuação">⏹ PARAR</button>') + '</div>' +
+        '<div class="hud-meio">PERGUNTA <b>' + (E.i + 1) + '</b>' + (EVENTO ? "/" + E.perguntas.length : "") + '<span class="hud-acertos">✔ ' + acertosAteAqui + " · ✘ " + (E.resultados.length - acertosAteAqui) + "</span></div>" +
         '<div class="hud-dir"><span class="hud-label">PONTOS</span><span class="hud-pontos" id="pontos">' + E.pontos.toLocaleString("pt-BR") + "</span></div>" +
       "</header>" +
       '<div class="progresso">' + pontinhos + "</div>" +
@@ -316,7 +360,7 @@
     $$(".opcao").forEach(function (b) {
       b.addEventListener("click", function () { responder(parseInt(b.getAttribute("data-i"), 10)); });
     });
-    $("#parar").addEventListener("click", function () { parar(); });
+    if (!EVENTO) $("#parar").addEventListener("click", function () { parar(); });
 
     E.timer = setInterval(tictac, 100);
     tictac();
@@ -407,7 +451,7 @@
 
     var ultima = E.i === E.perguntas.length - 1;
     var marcoN = CFG.marcoPerguntas || 10;
-    var noMarco = !ultima && E.resultados.length % marcoN === 0;
+    var noMarco = !EVENTO && !ultima && E.resultados.length % marcoN === 0;
     var acertosTotal = E.resultados.filter(function (x) { return x.ok; }).length;
     var fb = $("#feedback");
     fb.className = "feedback " + classe;
@@ -422,7 +466,7 @@
       (noMarco ? '<p class="fb-marco">🏅 <b>' + E.resultados.length + ' perguntas respondidas!</b> ' + acertosTotal + ' acertos até aqui. Continue para pontuar mais.</p>' : "") +
       '<div class="fb-botoes">' +
         '<button class="btn btn-grande" id="proxima">' + (ultima ? "🏁 VER RESULTADO" : "CONTINUAR ▶") + "</button>" +
-        (ultima ? "" : '<button class="btn btn-sec btn-parar-fb" id="parar-fb">⏹ PARAR E VER RESULTADO</button>') +
+        (ultima || EVENTO ? "" : '<button class="btn btn-sec btn-parar-fb" id="parar-fb">⏹ PARAR E VER RESULTADO</button>') +
       "</div>";
     fb.hidden = false;
     if (noMarco) Som.marco();
@@ -438,17 +482,18 @@
     E.fase = "transicao";
     Som.clique();
     E.i++;
-    if (E.i >= E.perguntas.length) { E.zerou = true; finalizar(); }
+    if (E.i >= E.perguntas.length) { E.zerou = !EVENTO; finalizar(); }
     else telaPergunta();
   }
 
   function parar() {
+    if (EVENTO) return;
     if (E.fase !== "pergunta" && E.fase !== "feedback") return;
     E.fase = "transicao";
     limparTimer();
     Som.urgente(false);
     Som.clique();
-    if (!E.resultados.length) { telaModo(); return; }
+    if (!E.resultados.length) { menuPrincipal(); return; }
     finalizar();
   }
 
@@ -472,6 +517,7 @@
     var tempoMedio = Math.round(E.resultados.reduce(function (s, r) { return s + r.ms; }, 0) / total);
     var pat = patente(pct, total);
     var estr = pct >= 80 ? 3 : pct >= 50 ? 2 : acertos > 0 ? 1 : 0;
+    var restantes = EVENTO ? Math.max(0, (EV.tentativas || 2) - E.tentativa) : 0;
 
     if (pct >= 70) Som.vitoria(); else Som.fimFraco();
 
@@ -507,10 +553,11 @@
         '<div class="stat"><b>' + (tempoMedio / 1000).toFixed(1).replace(".", ",") + 's</b><span>TEMPO MÉDIO</span></div>' +
       "</div>" +
       '<p class="status-salvo" id="status-salvo">Salvando sua pontuação…</p>' +
+      (EVENTO ? '<p class="patente-msg">' + (restantes > 0 ? "Você ainda tem " + restantes + " tentativa" + (restantes > 1 ? "s" : "") + ". Vale a melhor pontuação!" : "Suas tentativas acabaram. Vale a sua melhor pontuação!") + "</p>" : "") +
       '<div class="acoes">' +
-        '<button class="btn btn-grande btn-pulsa" id="de-novo">🔁 JOGAR DE NOVO</button>' +
+        (!EVENTO || restantes > 0 ? '<button class="btn btn-grande btn-pulsa" id="de-novo">🔁 JOGAR DE NOVO' + (EVENTO ? " (tentativa " + (E.tentativa + 1) + " de " + (EV.tentativas || 2) + ")" : "") + "</button>" : "") +
         '<button class="btn btn-sec" id="ir-ranking">🏆 VER RANKING</button>' +
-        '<button class="btn btn-sec" id="ir-menu">☰ MENU</button>' +
+        '<button class="btn btn-sec" id="ir-menu">' + (EVENTO ? "◀ INÍCIO" : "☰ MENU") + "</button>" +
       "</div>" +
       '<section class="revisao"><h3 class="subtitulo">' + (erros.length ? "REVISE O QUE ERROU (" + erros.length + ")" : "REVISÃO") + "</h3>" + revisao + "</section>",
       "resultado"
@@ -519,9 +566,10 @@
     animarNumero($("#placar-valor"), 0, E.pontos, 1400);
     if (pct >= 70) confete();
 
-    $("#de-novo").addEventListener("click", function () { Som.clique(); iniciar(E.escopo); });
+    var btnDeNovo = $("#de-novo");
+    if (btnDeNovo) btnDeNovo.addEventListener("click", function () { Som.clique(); if (EVENTO) jogarEvento(); else iniciar(E.escopo); });
     $("#ir-ranking").addEventListener("click", function () { Som.clique(); telaRanking(E.escopo, "tudo"); });
-    $("#ir-menu").addEventListener("click", function () { Som.clique(); telaModo(); });
+    $("#ir-menu").addEventListener("click", function () { Som.clique(); if (EVENTO) { E.jogador = ""; telaInicio(); } else telaModo(); });
 
     var partida = {
       jogador: E.jogador,
@@ -566,7 +614,7 @@
 
   function telaRanking(escopo, periodo) {
     E.fase = "ranking";
-    var abas = [{ id: "mix", rotulo: "🎮 Gerais" }].concat(META.modulos.map(function (m) {
+    var abas = EVENTO ? [{ id: "evento", rotulo: "🏆 Evento" }] : [{ id: "mix", rotulo: "🎮 Gerais" }].concat(META.modulos.map(function (m) {
       return { id: m.id, rotulo: m.icone + " " + m.nome };
     }));
     var periodos = [{ id: "tudo", r: "SEMPRE" }, { id: "mes", r: "30 DIAS" }, { id: "semana", r: "7 DIAS" }];
@@ -577,9 +625,9 @@
       '<div class="abas" role="tablist">' + abas.map(function (a) {
         return '<button class="aba' + (a.id === escopo ? " ativa" : "") + '" data-escopo="' + a.id + '">' + esc(a.rotulo) + "</button>";
       }).join("") + "</div>" +
-      '<div class="periodos">' + periodos.map(function (p) {
+      (EVENTO ? "" : '<div class="periodos">' + periodos.map(function (p) {
         return '<button class="chip' + (p.id === periodo ? " ativa" : "") + '" data-periodo="' + p.id + '">' + p.r + "</button>";
-      }).join("") + "</div>" +
+      }).join("") + "</div>") +
       '<div class="tabela-wrap"><div id="ranking-corpo" class="carregando">Carregando…</div></div>' +
       '<p class="nota-ranking" id="nota-ranking"></p>' +
       '<div class="acoes"><button class="btn btn-grande" id="jogar-agora">▶ JOGAR AGORA</button></div>',
@@ -588,11 +636,11 @@
 
     $("#voltar").addEventListener("click", function () {
       Som.clique();
-      if (E.jogador) telaModo(); else telaInicio();
+      menuPrincipal();
     });
     $("#jogar-agora").addEventListener("click", function () {
       Som.clique();
-      if (E.jogador) telaModo(); else telaInicio();
+      if (EVENTO && E.jogador) jogarEvento(); else menuPrincipal();
     });
     $$("[data-escopo]").forEach(function (b) {
       b.addEventListener("click", function () { Som.clique(); telaRanking(b.getAttribute("data-escopo"), periodo); });

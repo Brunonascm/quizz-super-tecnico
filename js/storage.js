@@ -1,6 +1,6 @@
 (function () {
   var CFG = window.QUIZ_CONFIG;
-  var K = { nome: "stq_nome", placar: "stq_placar", vistas: "stq_vistas", mudo: "stq_mudo", musica: "stq_musica_off" };
+  var K = { nome: "stq_nome", placar: "stq_placar", vistas: "stq_vistas", mudo: "stq_mudo", musica: "stq_musica_off", tent: "stq_evento_tent" };
 
   function lerJSON(chave, padrao) {
     try {
@@ -55,18 +55,19 @@
       });
   }
 
-  function corteRanking() {
-    if (!CFG.rankingDesde) return null;
-    var d = new Date(CFG.rankingDesde);
+  function corteRanking(escopo) {
+    var bruto = escopo === "evento" ? (CFG.evento && CFG.evento.rankingDesde) : CFG.rankingDesde;
+    if (!bruto) return null;
+    var d = new Date(bruto);
     return isNaN(d.getTime()) ? null : d;
   }
 
-  function inicioPeriodo(periodo) {
+  function inicioPeriodo(periodo, escopo) {
     var agora = new Date();
     var ini = null;
     if (periodo === "semana") ini = new Date(agora.getTime() - 7 * 86400000);
     else if (periodo === "mes") ini = new Date(agora.getTime() - 30 * 86400000);
-    var corte = corteRanking();
+    var corte = corteRanking(escopo);
     if (corte && (!ini || corte > ini)) ini = corte;
     return ini;
   }
@@ -88,9 +89,33 @@
       .slice(0, limite);
   }
 
+  function chaveNome(nome) {
+    return String(nome).replace(/\s+/g, " ").trim().toLowerCase();
+  }
+
   window.QuizStore = {
     nuvemAtiva: nuvemAtiva,
 
+    tentativasEvento: function (nome) {
+      var corte = corteRanking("evento");
+      var chave = chaveNome(nome);
+      var iniciadas = (lerJSON(K.tent, {})[chave] || []).filter(function (t) { return !corte || new Date(t) >= corte; }).length;
+      if (!modoSupabase()) return Promise.resolve(iniciadas);
+      var url = CFG.supabaseUrl.replace(/\/+$/, "") + "/rest/v1/placar?select=criado_em&escopo=eq.evento&jogador=ilike." +
+        encodeURIComponent(chave.replace(/[%*,()]/g, "_")) +
+        (corte ? "&criado_em=gte." + encodeURIComponent(corte.toISOString()) : "") + "&limit=50";
+      return req(url, { method: "GET", headers: cabecalhos({}) })
+        .then(function (r) { return r.json(); })
+        .then(function (linhas) { return Math.max(iniciadas, Array.isArray(linhas) ? linhas.length : 0); })
+        .catch(function () { return iniciadas; });
+    },
+
+    registrarTentativaEvento: function (nome) {
+      var mapa = lerJSON(K.tent, {});
+      var chave = chaveNome(nome);
+      (mapa[chave] = mapa[chave] || []).push(new Date().toISOString());
+      gravarJSON(K.tent, mapa);
+    },
     lerNome: function () { return localStorage.getItem(K.nome) || ""; },
     gravarNome: function (n) { try { localStorage.setItem(K.nome, n); } catch (e) {} },
 
@@ -150,7 +175,7 @@
 
     buscarRanking: function (escopo, periodo) {
       var limite = CFG.rankingTamanho;
-      var desde = inicioPeriodo(periodo);
+      var desde = inicioPeriodo(periodo, escopo);
 
       function doLocal() {
         var linhas = lerJSON(K.placar, []).filter(function (l) {
@@ -205,8 +230,10 @@
     },
 
     historicoLocal: function () {
-      var corte = corteRanking();
-      return lerJSON(K.placar, []).filter(function (p) { return !corte || new Date(p.criado_em) >= corte; });
+      return lerJSON(K.placar, []).filter(function (p) {
+        var corte = corteRanking(p.escopo);
+        return !corte || new Date(p.criado_em) >= corte;
+      });
     }
   };
 })();
