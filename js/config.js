@@ -3,7 +3,7 @@ window.QUIZ_CONFIG = {
 
   // TEMPO
   // Segundos que cada pergunta dura (igual para todas).
-  segundosPorPergunta: 30,
+  segundosPorPergunta: 50,
 
   // MODO EVENTO (página evento.html)
   evento: {
