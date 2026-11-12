@@ -55,11 +55,20 @@
       });
   }
 
+  function corteRanking() {
+    if (!CFG.rankingDesde) return null;
+    var d = new Date(CFG.rankingDesde);
+    return isNaN(d.getTime()) ? null : d;
+  }
+
   function inicioPeriodo(periodo) {
     var agora = new Date();
-    if (periodo === "semana") return new Date(agora.getTime() - 7 * 86400000);
-    if (periodo === "mes") return new Date(agora.getTime() - 30 * 86400000);
-    return null;
+    var ini = null;
+    if (periodo === "semana") ini = new Date(agora.getTime() - 7 * 86400000);
+    else if (periodo === "mes") ini = new Date(agora.getTime() - 30 * 86400000);
+    var corte = corteRanking();
+    if (corte && (!ini || corte > ini)) ini = corte;
+    return ini;
   }
 
   function melhorPorJogador(linhas, limite) {
@@ -195,6 +204,9 @@
         });
     },
 
-    historicoLocal: function () { return lerJSON(K.placar, []); }
+    historicoLocal: function () {
+      var corte = corteRanking();
+      return lerJSON(K.placar, []).filter(function (p) { return !corte || new Date(p.criado_em) >= corte; });
+    }
   };
 })();

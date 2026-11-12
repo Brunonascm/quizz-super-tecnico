@@ -265,7 +265,7 @@
   function telaPergunta() {
     var q = E.perguntas[E.i];
     var m = modulo(q.modulo);
-    E.total = CFG.segundosPorNivel[q.nivel] || 20;
+    E.total = Math.max(5, Math.round((CFG.segundosPorNivel[q.nivel] || 20) * (CFG.fatorTempo || 1)));
     E.opcoes = embaralhar(
       [{ t: q.certa, ok: true }].concat(q.erradas.map(function (t) { return { t: t, ok: false }; }))
     );
