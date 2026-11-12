@@ -41,9 +41,17 @@ Por ser serviço externo, precisa de aprovação de Segurança/TI.
 O Open Arena não é lugar para hospedar o quiz: ele roda cadeias de IA e modelos, não sites estáticos.
 
 ## 5. Ajustes rápidos (`js/config.js`)
+- `segundosPorPergunta`: segundos de cada pergunta, igual para todas (hoje 30).
+- `rankingDesde`: só valem no ranking e nos recordes as partidas a partir dessa data/hora (`"2026-12-04T08:00:00-03:00"`). Deixe `""` para mostrar tudo. Serve para "zerar" o ranking sem apagar nada.
 - `marcoPerguntas`: a cada quantas perguntas respondidas o jogo mostra um aviso de marco (hoje 10). A partida não tem limite: o jogador responde até apertar PARAR ou acabarem as perguntas da missão.
-- `segundosPorNivel`: tempo por pergunta (20, 25 e 30 s).
 - `pontosBase` e `pontosVelocidadeMax`: cada acerto vale 100 + até 100 pela velocidade, multiplicado pelo combo (até ×2).
+
+## 6. Modo Evento
+- **Jogar:** `evento.html` (ex.: `https://brunonascm.github.io/quizz-super-tecnico/evento.html`). Só Dúvidas Gerais, sem botão PARAR, nome e sobrenome obrigatórios, ranking próprio ("evento"), separado dos rankings dos módulos.
+- **Telão:** `telao.html` mostra o pódio e o top 10 ao vivo (atualiza a cada 5 s). Use F11 para tela cheia.
+- **Ajustes** em `js/config.js`, bloco `evento`: `perguntas` (20), `tentativas` (2, vale a melhor), `segundos` (30) e `rankingDesde` (zera só o ranking do evento e as tentativas).
+- **Apagar de verdade** só as partidas do evento: no Supabase, SQL Editor, `delete from public.placar where escopo = 'evento';`
+- As tentativas são controladas pelo nome (no banco e no navegador): é uma regra de confiança.
 
 Música: dois botões no canto superior direito ligam e desligam a música (🎵) e os efeitos (🔊). A música é gerada pelo navegador, sem arquivos de áudio nem direitos autorais, e só começa depois do primeiro clique (regra dos navegadores).
 
