@@ -96,6 +96,16 @@
   window.QuizStore = {
     nuvemAtiva: nuvemAtiva,
 
+    eventoLiberado: function () {
+      var cfgEv = CFG.evento || {};
+      if (cfgEv.exigirLiberacao === false || !modoSupabase()) return Promise.resolve(true);
+      var url = CFG.supabaseUrl.replace(/\/+$/, "") + "/rest/v1/evento_estado?select=liberado&id=eq.1&limit=1";
+      return req(url, { method: "GET", headers: cabecalhos({}), cache: "no-store" })
+        .then(function (r) { return r.json(); })
+        .then(function (linhas) { return Array.isArray(linhas) && !!linhas[0] && linhas[0].liberado === true; })
+        .catch(function () { return false; });
+    },
+
     tentativasEvento: function (nome) {
       var corte = corteRanking("evento");
       var chave = chaveNome(nome);

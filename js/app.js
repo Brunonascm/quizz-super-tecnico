@@ -135,11 +135,13 @@
         '<label for="nome" class="rotulo">' + (EVENTO ? "NOME E SOBRENOME" : "DIGITE SEU NOME") + "</label>" +
         '<input id="nome" class="campo" maxlength="24" autocomplete="off" spellcheck="false" placeholder="' + (EVENTO ? "Ex.: Maria Silva" : "Ex.: Maria S.") + '" value="' + esc(nome) + '">' +
         '<p class="msg-erro" id="erro-nome" role="alert"></p>' +
-        '<button class="btn btn-grande btn-pulsa" id="jogar">▶ JOGAR</button>' +
+        (EVENTO
+          ? '<button class="btn btn-grande" id="jogar" disabled>⏳ VERIFICANDO…</button><p class="msg-liberacao" id="aviso-liberacao"></p>'
+          : '<button class="btn btn-grande btn-pulsa" id="jogar">▶ JOGAR</button>') +
         '<button class="btn btn-sec" id="ver-ranking">🏆 RANKING</button>' +
       "</div>" +
       '<p class="dica">' + (EVENTO
-        ? "Modo Evento: " + (EV.perguntas || 20) + " perguntas misturadas, " + (EV.tentativas || 2) + " tentativas. Vale a melhor pontuação."
+        ? "Modo Evento: " + ((window.QUIZ_EVENTO && window.QUIZ_EVENTO.length) || EV.perguntas || 20) + " perguntas misturadas, " + (EV.tentativas || 2) + " tentativas. Vale a melhor pontuação."
         : "Responda dúvidas reais de implantação, ganhe pontos pela velocidade e suba no ranking.") + "</p>",
       "inicio"
     );
@@ -164,8 +166,31 @@
     $("#jogar").addEventListener("click", function () { avancar(destinoJogar); });
     $("#ver-ranking").addEventListener("click", function () { avancar(function () { telaRanking(EVENTO ? "evento" : "mix", "tudo"); }); });
     campo.addEventListener("keydown", function (ev) {
-      if (ev.key === "Enter") avancar(destinoJogar);
+      if (ev.key !== "Enter") return;
+      var bj = $("#jogar");
+      if (bj && bj.disabled) return;
+      avancar(destinoJogar);
     });
+
+    if (EVENTO) vigiarLiberacao();
+  }
+
+  function vigiarLiberacao() {
+    var estavaLiberado = null;
+    function aplicar(lib) {
+      var btn = $("#jogar");
+      var aviso = $("#aviso-liberacao");
+      if (!btn || !aviso) return;
+      btn.disabled = !lib;
+      btn.classList.toggle("btn-pulsa", lib);
+      btn.textContent = lib ? "▶ JOGAR" : "🔒 AGUARDE A LIBERAÇÃO";
+      aviso.textContent = lib ? "" : "O evento ainda não foi aberto. Esta tela libera sozinha quando o jogo começar.";
+      if (lib && estavaLiberado === false) Som.marco();
+      estavaLiberado = lib;
+    }
+    function checar() { Store.eventoLiberado().then(aplicar); }
+    checar();
+    E.timer = setInterval(checar, 6000);
   }
 
   /* ---------------- ESCOLHA DE MODO ---------------- */
@@ -219,7 +244,11 @@
   function jogarEvento() {
     E.fase = "verificando";
     render('<div class="contagem"><div class="contagem-sub">Verificando suas tentativas…</div></div>', "inicio");
-    Store.tentativasEvento(E.jogador).then(function (usadas) {
+    Store.eventoLiberado().then(function (lib) {
+      if (!lib) { telaInicio(); return null; }
+      return Store.tentativasEvento(E.jogador);
+    }).then(function (usadas) {
+      if (usadas === null) return;
       var max = EV.tentativas || 2;
       if (usadas >= max) { telaSemTentativas(max); return; }
       Store.registrarTentativaEvento(E.jogador);
@@ -274,9 +303,15 @@
     return porVistas(TODAS.filter(function (q) { return q.modulo === escopo; }));
   }
 
+  function perguntasEvento() {
+    var fixas = window.QUIZ_EVENTO;
+    if (fixas && fixas.length) return embaralhar(fixas);
+    return sortear("mix").slice(0, EV.perguntas || 20);
+  }
+
   function iniciar(escopo) {
     E.escopo = escopo;
-    E.perguntas = EVENTO ? sortear("mix").slice(0, EV.perguntas || 20) : sortear(escopo);
+    E.perguntas = EVENTO ? perguntasEvento() : sortear(escopo);
     E.i = 0;
     E.pontos = 0;
     E.combo = 0;
@@ -768,8 +803,9 @@
   document.addEventListener("pointerdown", destravarAudio, true);
   document.addEventListener("keydown", destravarAudio, true);
 
-  document.getElementById("rodape").textContent =
-    "Base: " + META.origem + " · " + TODAS.length + " perguntas · versão " + META.versao;
+  document.getElementById("rodape").textContent = EVENTO
+    ? "Super Técnico Quiz · Modo Evento"
+    : "Base: " + META.origem + " · " + TODAS.length + " perguntas · versão " + META.versao;
 
   E.jogador = Store.lerNome();
   telaInicio();
