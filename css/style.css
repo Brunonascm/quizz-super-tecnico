@@ -105,6 +105,8 @@ button:disabled { cursor: default; }
 .btn-sec { color: var(--texto); background: linear-gradient(180deg, #3b2a8f, #28196b); box-shadow: 0 6px 0 #150c42, 0 10px 24px rgba(0,0,0,.35); }
 .btn-mini { width: auto; display: inline-block; padding: 10px 14px; font-size: 11px; color: var(--texto); background: linear-gradient(180deg, #3b2a8f, #28196b); box-shadow: 0 4px 0 #150c42; }
 .btn-pulsa { animation: pulsa 1.6s ease-in-out infinite; }
+.btn:disabled { filter: grayscale(1) brightness(.55); box-shadow: 0 6px 0 #1c1c28; animation: none; cursor: not-allowed; }
+.msg-liberacao { min-height: 1.4em; margin: 0 0 14px; text-align: center; color: var(--texto-suave); font-size: 15px; }
 @keyframes pulsa { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.025); } }
 
 /* ---------- Início ---------- */
