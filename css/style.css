@@ -116,9 +116,9 @@ button:disabled { cursor: default; }
 @keyframes flutua { 0%, 100% { transform: translateY(0) rotate(-3deg); } 50% { transform: translateY(-10px) rotate(3deg); } }
 .logo-titulo { margin: 10px 0 0; font-family: var(--pixel); font-weight: 400; line-height: 1.25; }
 .logo-titulo span { display: block; font-size: clamp(28px, 7.4vw, 58px); letter-spacing: 2px; background: linear-gradient(180deg, #fff 0%, #ffe14d 45%, #ff7a00 100%); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 4px 0 #6d2400) drop-shadow(0 0 22px rgba(255, 122, 0, .55)); }
+.logo-titulo .tec { position: relative; width: fit-content; margin: 0 auto; }
+.logo-titulo .tec::before { content: ""; position: absolute; left: calc(1.3em + 2px); top: -.135em; width: .3em; height: .22em; background: #ffe14d; clip-path: polygon(45% 0, 100% 0, 55% 100%, 0 100%); }
 .logo-sub { margin: 16px 0 0; font-family: var(--corpo); font-weight: 700; font-size: clamp(20px, 4.6vw, 30px); color: var(--ciano); letter-spacing: 10px; text-indent: 10px; text-shadow: 0 0 14px var(--ciano); }
-.ac { position: relative; font-style: normal; }
-.ac::before { content: ""; position: absolute; left: 30%; top: -.26em; width: .3em; height: .22em; background: #ffe14d; clip-path: polygon(45% 0, 100% 0, 55% 100%, 0 100%); }
 
 .painel { width: 100%; background: var(--painel); border: 2px solid var(--borda); border-radius: 20px; padding: 22px; backdrop-filter: blur(6px); box-shadow: 0 0 0 4px rgba(0,0,0,.18), 0 20px 50px rgba(0,0,0,.45); }
 .painel-inicio { max-width: 440px; display: grid; gap: 14px; }
