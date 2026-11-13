@@ -128,7 +128,7 @@
     render(
       '<div class="logo">' +
         '<svg class="logo-raio" viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="gr" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffe14d"/><stop offset="1" stop-color="#ff6a00"/></linearGradient></defs><polygon points="36,2 10,36 28,36 22,62 54,24 34,24" fill="url(#gr)" stroke="#fff" stroke-width="2" stroke-linejoin="round"/></svg>' +
-        '<h1 class="logo-titulo" aria-label="Super Técnico"><span>SUPER</span><span>T<i class="ac">E</i>CNICO</span></h1>' +
+        '<h1 class="logo-titulo" aria-label="Super Técnico"><span>SUPER</span><span class="tec">TECNICO</span></h1>' +
         '<p class="logo-sub">' + (EVENTO ? "MODO EVENTO" : "QUIZ DOMÍNIO") + "</p>" +
       "</div>" +
       '<div class="painel painel-inicio">' +
